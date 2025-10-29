@@ -26,8 +26,8 @@ from db.db_handler import get_handler
 
 # Page configuration
 st.set_page_config(
-    page_title="Black-Scholes Option Pricer",
-    page_icon="📈",
+    page_title="Sigma Option 🗿",
+    page_icon="🗿",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -73,11 +73,11 @@ def initialize_session_state():
 
 def display_header():
     """Display the application header."""
-    st.markdown('<h1 class="main-header">📈 Black-Scholes Option Pricer</h1>',
+    st.markdown('<h1 class="main-header">🗿 Sigma Option</h1>',
                 unsafe_allow_html=True)
     st.markdown("""
         <p style='text-align: center; color: #666; margin-bottom: 2rem;'>
-        Professional option pricing, Greeks calculation, and sensitivity analysis
+        Professional Black-Scholes option pricing with interactive P&L analysis
         </p>
     """, unsafe_allow_html=True)
 
