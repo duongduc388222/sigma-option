@@ -49,8 +49,8 @@ class OptionVisualizer:
                           base_params: Dict,
                           spot_range: Optional[Tuple[float, float]] = None,
                           vol_range: Optional[Tuple[float, float]] = None,
-                          spot_points: int = 20,
-                          vol_points: int = 20,
+                          spot_points: int = 10,
+                          vol_points: int = 10,
                           figsize: Tuple[float, float] = (10, 8)) -> Figure:
         """
         Create a heatmap showing option price sensitivity to spot price and volatility.
@@ -179,8 +179,8 @@ class OptionVisualizer:
                         base_params: Dict,
                         spot_range: Optional[Tuple[float, float]] = None,
                         vol_range: Optional[Tuple[float, float]] = None,
-                        spot_points: int = 20,
-                        vol_points: int = 20,
+                        spot_points: int = 10,
+                        vol_points: int = 10,
                         figsize: Tuple[float, float] = (10, 8),
                         show_percentage: bool = False) -> Figure:
         """
@@ -285,9 +285,9 @@ class OptionVisualizer:
 
                 # Format based on whether showing percentage or dollar
                 if show_percentage:
-                    display_text = f'{text_value:.1f}%'
+                    display_text = f'{text_value:.1f}'
                 else:
-                    display_text = f'${text_value:.2f}'
+                    display_text = f'{text_value:.2f}'
 
                 ax.text(text_x, text_y, display_text,
                        ha='center', va='center', fontsize=7,
@@ -329,8 +329,8 @@ class OptionVisualizer:
                            base_params: Dict,
                            spot_range: Optional[Tuple[float, float]] = None,
                            vol_range: Optional[Tuple[float, float]] = None,
-                           spot_points: int = 20,
-                           vol_points: int = 20,
+                           spot_points: int = 10,
+                           vol_points: int = 10,
                            figsize: Tuple[float, float] = (10, 8)) -> Figure:
         """
         Create a heatmap for a specific Greek (Delta, Gamma, Vega, Theta, or Rho).
