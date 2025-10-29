@@ -40,8 +40,10 @@ class OptionVisualizer:
             plt.style.use('default')
 
         # Professional color schemes
-        self.price_cmap = 'viridis'  # For price heatmaps
-        self.pnl_cmap = 'RdYlGn'     # For P&L heatmaps (red=loss, green=profit)
+        # For prices: reversed RdYlGn (green=high, red=low)
+        self.price_cmap = 'RdYlGn'
+        # For P&L: normal RdYlGn (green=profit, red=loss)
+        self.pnl_cmap = 'RdYlGn'
 
     def plot_price_heatmap(self,
                           base_params: Dict,
@@ -121,22 +123,36 @@ class OptionVisualizer:
         # Create figure
         fig, ax = plt.subplots(figsize=figsize)
 
-        # Create heatmap
-        im = ax.contourf(S_grid, vol_grid * 100, prices, levels=20,
-                        cmap=self.price_cmap)
+        # Create discrete cell-based heatmap using pcolormesh
+        # Reverse colormap for prices (green=high, red=low)
+        im = ax.pcolormesh(S_grid, vol_grid * 100, prices,
+                          cmap=self.price_cmap + '_r',
+                          shading='auto', edgecolors='white', linewidth=0.5)
 
-        # Add contour lines
-        contours = ax.contour(S_grid, vol_grid * 100, prices, levels=10,
-                             colors='white', alpha=0.3, linewidths=0.5)
-        ax.clabel(contours, inline=True, fontsize=8, fmt='%.1f')
+        # Add text annotations showing values in each cell
+        for i in range(vol_points):
+            for j in range(spot_points):
+                text_value = prices[i, j]
+                # Position text at center of cell
+                text_x = spot_prices[j]
+                text_y = volatilities[i] * 100
+
+                # Determine text color based on background (for readability)
+                # Normalize price to 0-1 range for color determination
+                norm_val = (text_value - np.min(prices)) / (np.max(prices) - np.min(prices))
+                text_color = 'white' if norm_val < 0.5 else 'black'
+
+                ax.text(text_x, text_y, f'{text_value:.2f}',
+                       ha='center', va='center', fontsize=7,
+                       color=text_color, fontweight='bold')
 
         # Mark current spot and volatility if provided
         if 'spot_price' in base_params and 'volatility' in base_params:
             current_S = base_params['spot_price']
             current_vol = base_params['volatility'] * 100
             ax.plot(current_S, current_vol, 'r*', markersize=15,
-                   label='Current Position', markeredgecolor='white',
-                   markeredgewidth=1.5)
+                   label='Current Position', markeredgecolor='yellow',
+                   markeredgewidth=2)
             ax.legend(loc='upper left')
 
         # Labels and title
@@ -243,30 +259,47 @@ class OptionVisualizer:
         # Create figure
         fig, ax = plt.subplots(figsize=figsize)
 
-        # Determine symmetric color scale around zero
+        # Determine symmetric color scale around zero for diverging colormap
         vmax = max(abs(np.min(pnl)), abs(np.max(pnl)))
         vmin = -vmax
 
-        # Create heatmap
-        im = ax.contourf(S_grid, vol_grid * 100, pnl, levels=20,
-                        cmap=self.pnl_cmap, vmin=vmin, vmax=vmax)
+        # Create discrete cell-based heatmap using pcolormesh
+        # Normal RdYlGn colormap (green=profit, red=loss)
+        im = ax.pcolormesh(S_grid, vol_grid * 100, pnl,
+                          cmap=self.pnl_cmap,
+                          vmin=vmin, vmax=vmax,
+                          shading='auto', edgecolors='white', linewidth=0.5)
 
-        # Add zero contour line (breakeven)
-        zero_contour = ax.contour(S_grid, vol_grid * 100, pnl, levels=[0],
-                                 colors='black', linewidths=2, linestyles='--')
-        ax.clabel(zero_contour, inline=True, fontsize=10, fmt='Breakeven')
+        # Add text annotations showing P&L values in each cell
+        for i in range(vol_points):
+            for j in range(spot_points):
+                text_value = pnl[i, j]
+                # Position text at center of cell
+                text_x = spot_prices[j]
+                text_y = volatilities[i] * 100
 
-        # Add additional contour lines
-        contours = ax.contour(S_grid, vol_grid * 100, pnl, levels=10,
-                             colors='white', alpha=0.3, linewidths=0.5)
+                # Determine text color based on P&L value (for readability)
+                # For diverging colormap centered at 0
+                norm_val = (text_value - vmin) / (vmax - vmin)
+                text_color = 'white' if 0.3 < norm_val < 0.7 else 'black'
+
+                # Format based on whether showing percentage or dollar
+                if show_percentage:
+                    display_text = f'{text_value:.1f}%'
+                else:
+                    display_text = f'${text_value:.2f}'
+
+                ax.text(text_x, text_y, display_text,
+                       ha='center', va='center', fontsize=7,
+                       color=text_color, fontweight='bold')
 
         # Mark current spot and volatility
         if 'spot_price' in base_params and 'volatility' in base_params:
             current_S = base_params['spot_price']
             current_vol = base_params['volatility'] * 100
             ax.plot(current_S, current_vol, 'k*', markersize=15,
-                   label='Current Position', markeredgecolor='white',
-                   markeredgewidth=1.5)
+                   label='Current Position', markeredgecolor='yellow',
+                   markeredgewidth=2)
             ax.legend(loc='upper left')
 
         # Labels and title
@@ -352,22 +385,35 @@ class OptionVisualizer:
         # Create figure
         fig, ax = plt.subplots(figsize=figsize)
 
-        # Create heatmap
-        im = ax.contourf(S_grid, vol_grid * 100, greek_values, levels=20,
-                        cmap=self.price_cmap)
+        # Create discrete cell-based heatmap using pcolormesh
+        # Use reversed RdYlGn (green=high, red=low) for Greeks
+        im = ax.pcolormesh(S_grid, vol_grid * 100, greek_values,
+                          cmap=self.price_cmap + '_r',
+                          shading='auto', edgecolors='white', linewidth=0.5)
 
-        # Add contour lines
-        contours = ax.contour(S_grid, vol_grid * 100, greek_values, levels=10,
-                             colors='white', alpha=0.3, linewidths=0.5)
-        ax.clabel(contours, inline=True, fontsize=8, fmt='%.3f')
+        # Add text annotations showing Greek values in each cell
+        for i in range(vol_points):
+            for j in range(spot_points):
+                text_value = greek_values[i, j]
+                # Position text at center of cell
+                text_x = spot_prices[j]
+                text_y = volatilities[i] * 100
+
+                # Determine text color based on background (for readability)
+                norm_val = (text_value - np.min(greek_values)) / (np.max(greek_values) - np.min(greek_values))
+                text_color = 'white' if norm_val < 0.5 else 'black'
+
+                ax.text(text_x, text_y, f'{text_value:.3f}',
+                       ha='center', va='center', fontsize=7,
+                       color=text_color, fontweight='bold')
 
         # Mark current position
         if 'spot_price' in base_params and 'volatility' in base_params:
             current_S = base_params['spot_price']
             current_vol = base_params['volatility'] * 100
             ax.plot(current_S, current_vol, 'r*', markersize=15,
-                   label='Current Position', markeredgecolor='white',
-                   markeredgewidth=1.5)
+                   label='Current Position', markeredgecolor='yellow',
+                   markeredgewidth=2)
             ax.legend(loc='upper left')
 
         # Labels and title
