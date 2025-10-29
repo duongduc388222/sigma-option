@@ -8,7 +8,7 @@ A professional Black-Scholes option pricing application with interactive P&L ana
 
 ## 🌐 Live Demo
 
-**Website:** [Coming Soon - Deployment in Progress]
+**Website:** [🗿 Sigma Option babyyyyyyy!](https://sigmaoption-ducduong.streamlit.app/)
 
 *The application is currently available for local deployment. Web hosting coming soon!*
 
