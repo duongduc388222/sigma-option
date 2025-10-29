@@ -65,6 +65,10 @@ def initialize_session_state():
         st.session_state.calculation_saved = False
     if 'last_calc_id' not in st.session_state:
         st.session_state.last_calc_id = None
+    if 'purchase_price' not in st.session_state:
+        st.session_state.purchase_price = None
+    if 'last_fair_value' not in st.session_state:
+        st.session_state.last_fair_value = None
 
 
 def display_header():
@@ -83,7 +87,7 @@ def get_input_parameters():
     Get option parameters from sidebar input.
 
     Returns:
-        Dictionary containing all input parameters
+        Dictionary containing all input parameters (including purchase_price)
     """
     st.sidebar.header("📊 Option Parameters")
 
@@ -93,6 +97,28 @@ def get_input_parameters():
         ["Call", "Put"],
         help="Select the type of option to price"
     )
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("💵 Entry Price")
+
+    # Purchase/Entry Price input with auto-population support
+    # Default to last calculated fair value if available, else use a reasonable default
+    default_purchase_price = st.session_state.last_fair_value if st.session_state.last_fair_value is not None else 10.0
+
+    purchase_price = st.sidebar.number_input(
+        "Purchase Price / Entry Price ($)",
+        min_value=0.01,
+        value=float(default_purchase_price),
+        step=0.01,
+        format="%.4f",
+        help="The price you paid (or plan to pay) for the option. Auto-populated with fair value."
+    )
+
+    # Button to reset to fair value
+    if st.sidebar.button("🔄 Reset to Fair Value", help="Set purchase price to the calculated fair value"):
+        if st.session_state.last_fair_value is not None:
+            st.session_state.purchase_price = st.session_state.last_fair_value
+            st.rerun()
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Market Parameters")
@@ -156,7 +182,8 @@ def get_input_parameters():
         'strike_price': strike_price,
         'time_to_maturity': time_to_maturity,
         'volatility': volatility,
-        'risk_free_rate': risk_free_rate
+        'risk_free_rate': risk_free_rate,
+        'purchase_price': purchase_price
     }
 
 
@@ -164,7 +191,7 @@ def display_option_price(params, model):
     """Display the calculated option price and moneyness."""
     st.subheader("💰 Option Valuation")
 
-    # Calculate price
+    # Calculate price (fair value)
     if params['option_type'] == 'call':
         price = model.call_price(
             params['spot_price'],
@@ -181,6 +208,9 @@ def display_option_price(params, model):
             params['volatility'],
             params['risk_free_rate']
         )
+
+    # Store fair value in session state for auto-population of purchase price
+    st.session_state.last_fair_value = price
 
     # Determine moneyness
     S, K = params['spot_price'], params['strike_price']
@@ -205,27 +235,60 @@ def display_option_price(params, model):
             moneyness = "At-the-Money (ATM)"
             moneyness_color = "blue"
 
+    # Calculate P&L
+    purchase_price = params.get('purchase_price', price)
+    pnl = price - purchase_price
+    pnl_pct = (pnl / purchase_price) * 100 if purchase_price > 0 else 0
+
     # Display in columns
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.metric(
-            label="Option Price",
+            label="Fair Value (Current)",
             value=f"${price:.4f}",
             help="Theoretical fair value of the option"
         )
 
     with col2:
         st.metric(
-            label="Intrinsic Value",
-            value=f"${max(S - K, 0) if params['option_type'] == 'call' else max(K - S, 0):.4f}",
-            help="Value if exercised immediately"
+            label="Purchase Price",
+            value=f"${purchase_price:.4f}",
+            help="Entry price for the option"
         )
 
     with col3:
+        # P&L metric with delta indication
+        pnl_delta = f"{pnl:+.4f}" if pnl != 0 else "0.0000"
+        st.metric(
+            label="P&L (Profit/Loss)",
+            value=f"${pnl:.4f}",
+            delta=f"{pnl_pct:+.2f}%",
+            delta_color="normal",
+            help="Current Value - Purchase Price"
+        )
+
+    with col4:
         st.markdown(f"**Moneyness**")
         st.markdown(f"<p style='color: {moneyness_color}; font-size: 1.2rem; font-weight: bold;'>{moneyness}</p>",
                    unsafe_allow_html=True)
+
+    # Additional info row
+    col1, col2 = st.columns(2)
+    with col1:
+        intrinsic = max(S - K, 0) if params['option_type'] == 'call' else max(K - S, 0)
+        time_value = price - intrinsic
+        st.metric(
+            label="Intrinsic Value",
+            value=f"${intrinsic:.4f}",
+            help="Value if exercised immediately"
+        )
+    with col2:
+        st.metric(
+            label="Time Value",
+            value=f"${time_value:.4f}",
+            help="Option price - Intrinsic value"
+        )
 
     return price
 
