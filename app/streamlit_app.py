@@ -390,22 +390,163 @@ def display_put_call_parity(params, model):
         """)
 
 
-def display_visualizations(params, price):
-    """Display interactive visualizations."""
+def display_visualizations(params, price, model):
+    """Display interactive visualizations with P&L-first approach."""
     st.subheader("📊 Sensitivity Analysis")
 
-    # Tabs for different visualizations
+    # Tabs for different visualizations - P&L FIRST
     tab1, tab2, tab3, tab4 = st.tabs([
-        "Price Heatmap",
-        "P&L Scenarios",
-        "Greeks Heatmap",
-        "Payoff Diagram"
+        "💰 P&L Analysis",
+        "📈 Price Heatmaps",
+        "📐 Greeks Heatmap",
+        "📉 Payoff Diagram"
     ])
 
     viz = OptionVisualizer()
 
     with tab1:
-        st.markdown("**Option Price Sensitivity to Spot Price and Volatility**")
+        st.markdown("### Profit & Loss Analysis")
+        st.markdown("**Compare Call and Put P&L scenarios side-by-side**")
+
+        # Toggle between P&L view and Price view
+        view_mode = st.radio(
+            "View Mode:",
+            ["P&L View (Profit/Loss)", "Price View (Fair Value)"],
+            horizontal=True,
+            help="Toggle between P&L analysis and price sensitivity"
+        )
+
+        # Common controls
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            spot_range_pct = st.slider(
+                "Spot Price Range (%)",
+                10, 50, 30,
+                help="Range around current spot price",
+                key="pnl_spot_range"
+            )
+        with col2:
+            vol_range_pct = st.slider(
+                "Volatility Range (%)",
+                10, 100, 50,
+                help="Range around current volatility",
+                key="pnl_vol_range"
+            )
+        with col3:
+            show_pct = st.checkbox(
+                "Show as percentage",
+                value=False,
+                help="Display P&L as percentage instead of dollars"
+            )
+
+        # Calculate ranges
+        S_min = params['spot_price'] * (1 - spot_range_pct / 100)
+        S_max = params['spot_price'] * (1 + spot_range_pct / 100)
+        vol_min = params['volatility'] * (1 - vol_range_pct / 100)
+        vol_max = params['volatility'] * (1 + vol_range_pct / 100)
+
+        # Get purchase price
+        purchase_price = params.get('purchase_price', price)
+
+        if view_mode == "P&L View (Profit/Loss)":
+            # P&L View: Show side-by-side Call and Put P&L heatmaps
+            st.markdown("---")
+            st.markdown("#### Call vs Put P&L Comparison")
+
+            col1, col2 = st.columns(2)
+
+            # Calculate Call price and P&L heatmap
+            with col1:
+                st.markdown("**📞 CALL Option P&L**")
+                call_price = model.call_price(
+                    params['spot_price'],
+                    params['strike_price'],
+                    params['time_to_maturity'],
+                    params['volatility'],
+                    params['risk_free_rate']
+                )
+
+                call_params = params.copy()
+                call_params['option_type'] = 'call'
+
+                fig_call = viz.plot_pnl_heatmap(
+                    purchase_price if params['option_type'] == 'call' else call_price,
+                    call_params,
+                    spot_range=(S_min, S_max),
+                    vol_range=(vol_min, vol_max),
+                    show_percentage=show_pct,
+                    figsize=(8, 6)
+                )
+                st.pyplot(fig_call)
+
+                # Show key metrics
+                call_pnl = call_price - (purchase_price if params['option_type'] == 'call' else call_price)
+                st.metric("Current Call P&L", f"${call_pnl:.4f}", f"{(call_pnl/(purchase_price if params['option_type'] == 'call' else call_price)*100):+.2f}%")
+
+            # Calculate Put price and P&L heatmap
+            with col2:
+                st.markdown("**📱 PUT Option P&L**")
+                put_price = model.put_price(
+                    params['spot_price'],
+                    params['strike_price'],
+                    params['time_to_maturity'],
+                    params['volatility'],
+                    params['risk_free_rate']
+                )
+
+                put_params = params.copy()
+                put_params['option_type'] = 'put'
+
+                fig_put = viz.plot_pnl_heatmap(
+                    purchase_price if params['option_type'] == 'put' else put_price,
+                    put_params,
+                    spot_range=(S_min, S_max),
+                    vol_range=(vol_min, vol_max),
+                    show_percentage=show_pct,
+                    figsize=(8, 6)
+                )
+                st.pyplot(fig_put)
+
+                # Show key metrics
+                put_pnl = put_price - (purchase_price if params['option_type'] == 'put' else put_price)
+                st.metric("Current Put P&L", f"${put_pnl:.4f}", f"{(put_pnl/(purchase_price if params['option_type'] == 'put' else put_price)*100):+.2f}%")
+
+        else:
+            # Price View: Show side-by-side Call and Put price heatmaps
+            st.markdown("---")
+            st.markdown("#### Call vs Put Price Comparison")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**📞 CALL Option Price**")
+                call_params = params.copy()
+                call_params['option_type'] = 'call'
+
+                fig_call = viz.plot_price_heatmap(
+                    call_params,
+                    spot_range=(S_min, S_max),
+                    vol_range=(vol_min, vol_max),
+                    figsize=(8, 6)
+                )
+                st.pyplot(fig_call)
+
+            with col2:
+                st.markdown("**📱 PUT Option Price**")
+                put_params = params.copy()
+                put_params['option_type'] = 'put'
+
+                fig_put = viz.plot_price_heatmap(
+                    put_params,
+                    spot_range=(S_min, S_max),
+                    vol_range=(vol_min, vol_max),
+                    figsize=(8, 6)
+                )
+                st.pyplot(fig_put)
+
+    with tab2:
+        st.markdown("**Single Option Price Sensitivity Analysis**")
+        st.markdown("_Detailed view for the selected option type_")
 
         # Customization options
         col1, col2 = st.columns(2)
@@ -413,13 +554,15 @@ def display_visualizations(params, price):
             spot_range_pct = st.slider(
                 "Spot Price Range (%)",
                 10, 50, 30,
-                help="Range around current spot price"
+                help="Range around current spot price",
+                key="price_spot_range"
             )
         with col2:
             vol_range_pct = st.slider(
                 "Volatility Range (%)",
                 10, 100, 50,
-                help="Range around current volatility"
+                help="Range around current volatility",
+                key="price_vol_range"
             )
 
         # Create heatmap
@@ -432,18 +575,6 @@ def display_visualizations(params, price):
             params,
             spot_range=(S_min, S_max),
             vol_range=(vol_min, vol_max)
-        )
-        st.pyplot(fig)
-
-    with tab2:
-        st.markdown("**Profit & Loss Scenarios**")
-
-        show_pct = st.checkbox("Show P&L as percentage", value=False)
-
-        fig = viz.plot_pnl_heatmap(
-            price,
-            params,
-            show_percentage=show_pct
         )
         st.pyplot(fig)
 
@@ -655,8 +786,8 @@ def main():
 
         st.markdown("---")
 
-        # Visualizations
-        display_visualizations(params, price)
+        # Visualizations (pass model for P&L calculations)
+        display_visualizations(params, price, model)
 
         st.markdown("---")
 
