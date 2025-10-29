@@ -89,6 +89,14 @@ def get_input_parameters():
     Returns:
         Dictionary containing all input parameters (including purchase_price)
     """
+    # Attribution at top
+    st.sidebar.markdown("""
+    <p style='text-align: left; color: #666; font-size: 0.9rem; margin-bottom: 1rem;'>
+    <strong>Created by: Duc Duong 🗿</strong><br>
+    <span style='font-size: 0.8rem; font-style: italic;'>using Python, Streamlit, and a dream of breaking into Quant</span>
+    </p>
+    """, unsafe_allow_html=True)
+
     st.sidebar.header("📊 Option Parameters")
 
     # Option type
@@ -747,13 +755,6 @@ def display_sidebar_info():
     - Log-normal price distribution
     """)
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("""
-    <p style='text-align: center; color: #666; font-size: 0.8rem;'>
-    Built with Python, Streamlit, and NumPy<br>
-    By Duong Hong Duc
-    </p>
-    """, unsafe_allow_html=True)
 
 
 def main():
